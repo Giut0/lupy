@@ -87,14 +87,24 @@ def write_csv(video_path, label, confidence, csv_file="predictions.csv"):
 def rename_video(video_path, label):
     """
     Rename the video file based on the predicted label.
+    If a file with the new name already exists, add a counter to avoid overwriting.
     :param video_path: Path to the video file
     :param label: Predicted label
     :return: None
     """
     base, ext = os.path.splitext(video_path)
     folder = os.path.dirname(base)
-    new_name = f"{folder}/{label}{ext}"
+    new_name = os.path.join(folder, f"{label}{ext}")
+    counter = 1
+
+    # Increment the filename if it already exists
+    while os.path.exists(new_name):
+        new_name = os.path.join(folder, f"{label}_{counter+1}{ext}")
+        counter += 1
+
     os.rename(video_path, new_name)
+
+    return new_name
 
 def get_best_frame(video, detection_model, conf_threshold=0.30, frame_interval=5):
     """ Get the best frame from the video based on detection confidence.

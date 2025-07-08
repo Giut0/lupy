@@ -49,7 +49,7 @@ def main(
         filename = os.path.basename(video_path)
 
         if rename:
-            myutils.rename_video(video_path, best_label)
+            video_path = myutils.rename_video(video_path, best_label)
 
         typer.echo(f"  └ Video: {filename} -- Label: {best_label} (Confidence: {best_conf:.2f})")
 
@@ -67,7 +67,8 @@ def main(
             filename = os.path.basename(video_path)
 
             if rename:
-                myutils.rename_video(video_path, best_label)
+                video_path = myutils.rename_video(video_path, best_label)
+
 
             typer.echo(f"  └ Video: {filename} -- Label: {best_label} (Confidence: {best_conf:.2f})")
 

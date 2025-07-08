@@ -1,0 +1,7 @@
+video_path,label,confidence,timestamp
+"/home/giuto/Desktop/MyProject/lupy/test_video/wolf.mp4",wolf,0.97574,2025-07-08 19:02:00
+"/home/giuto/Desktop/MyProject/lupy/test_video/boar.mp4",boar,0.49313,2025-07-08 19:02:00
+"/home/giuto/Desktop/MyProject/lupy/test_video/wolf_2.mp4",wolf,0.97574,2025-07-08 19:02:00
+"/home/giuto/Desktop/MyProject/lupy/test_video/fox.mp4",fox,0.98386,2025-07-08 19:02:00
+"/home/giuto/Desktop/MyProject/lupy/test_video/fox_2.mp4",fox,0.98386,2025-07-08 19:02:00
+"/home/giuto/Desktop/MyProject/lupy/test_video/wolf_3.mp4",wolf,0.97574,2025-07-08 19:02:00
