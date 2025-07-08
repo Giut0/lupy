@@ -7,9 +7,24 @@ import warnings
 import cv2 as cv
 from PIL import Image
 import os
+import sys
+import contextlib
 from datetime import datetime
 from megadetector.detection import run_detector
 warnings.filterwarnings("ignore")
+
+@contextlib.contextmanager
+def suppress_output():
+    with open(os.devnull, 'w') as devnull:
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = devnull
+        sys.stderr = devnull
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
 
 MODEL_PATH = "model/clf_model.joblib"
 CONFIDENCE_THRESHOLD_EARLY_STOP = 0.80
@@ -33,19 +48,22 @@ def model_setup():
     """ Load the feature extractor model and the classifier.
     :return: Tuple containing the feature extractor model, the classifier, and the device.
     """
-    # Setup device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    with suppress_output():
+        # Setup device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        detection_model = run_detector.load_detector("MDV5A", force_cpu=(device == "cpu"))
+        
+        # Load feature extractor model (ViT without classifier)
+        model_feat = timm.create_model('vit_base_patch16_224', pretrained=True)
+        model_feat.reset_classifier(0)  # Remove classification head
+        model_feat.eval()
+        model_feat = model_feat.to(device)
+        
+        # Load the Logistic Regression classifier
+        clf = joblib.load(MODEL_PATH)
     
-    # Load feature extractor model (ViT without classifier)
-    model_feat = timm.create_model('vit_base_patch16_224', pretrained=True)
-    model_feat.reset_classifier(0)  # Remove classification head
-    model_feat.eval()
-    model_feat = model_feat.to(device)
-    
-    # Load the Logistic Regression classifier
-    clf = joblib.load(MODEL_PATH)
-    
-    return model_feat, clf, device
+    return model_feat, clf, device, detection_model
 
 def write_csv(video_path, label, confidence, csv_file="predictions.csv"):
     """
@@ -78,15 +96,15 @@ def rename_video(video_path, label):
     new_name = f"{folder}/{label}{ext}"
     os.rename(video_path, new_name)
 
-def get_best_frame(video, device, conf_threshold=0.30, frame_interval=5):
+def get_best_frame(video, detection_model, conf_threshold=0.30, frame_interval=5):
     """ Get the best frame from the video based on detection confidence.
     :param video: OpenCV VideoCapture object
     :param device: Device to run the model on ('cpu' or 'cuda')
+    :param detection_model: Model for object detection
     :param conf_threshold: Confidence threshold for early stopping
     :param frame_interval: Interval to skip frames (e.g., analyze every 5th frame)
     :return: Best frame and its bounding box
     """
-    detection_model = run_detector.load_detector("MDV5A", force_cpu=(device == "cpu"))
     best_conf = 0.0
     best_frame = None
     frame_count = 0
@@ -139,11 +157,11 @@ def crop_bounding_box(frame, bounding_box):
     cropped = frame.crop((left, top, right, bottom))
     return cropped
 
-def classificate_single_video(video_path, model_feat, clf, device, frame_interval=5):
+def classificate_single_video(video_path, model_feat, clf, detection_model, device, frame_interval=5):
     video = cv.VideoCapture(video_path)
     best_frame = None
-    conf_threshold = 0.30
-    best_frame, best_bounding_box = get_best_frame(video, conf_threshold, frame_interval)
+    
+    best_frame, best_bounding_box = get_best_frame(video, detection_model, 0.30, frame_interval)
 
     inv_label_map = {v: k for k, v in label_map.items()}  # per decodifica
 
