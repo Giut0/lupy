@@ -187,4 +187,11 @@ def classify_single_video(video_path, model_feat, classifier, detection_model, d
     return pred_label, confidence
 
 
-    
+def classify_multiple_videos(video_folder, model_feat, classifier, detection_model, device, frame_interval=5):
+    results = []
+    for filename in os.listdir(video_folder):
+        if filename.endswith(('.mp4', '.avi', '.mov')):
+            video_path = os.path.join(video_folder, filename)
+            best_label, best_conf = classify_single_video(video_path, model_feat, classifier, detection_model, device, frame_interval)
+            results.append((video_path, best_label, best_conf))
+    return results
