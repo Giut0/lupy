@@ -170,30 +170,33 @@ def crop_bounding_box(frame, bounding_box):
 def classify_single_video(video_path, model_feat, classifier, detection_model, device, frame_interval=5):
     video = cv.VideoCapture(video_path)
     best_frame = None
+    best_bounding_box = []
+    try:
+        best_frame, best_bounding_box = get_best_frame(video, detection_model, 0.30, frame_interval)
+
+        inv_label_map = {v: k for k, v in label_map.items()} 
+
+        # Load the image transformation
+        image = crop_bounding_box(Image.fromarray(cv.cvtColor(best_frame, cv.COLOR_BGR2RGB)).convert("RGB"), best_bounding_box)
+
+        input_tensor = transform(image).unsqueeze(0).to(device)
+
+        # Extract features
+        with torch.no_grad():
+            features = model_feat(input_tensor)
+            features_np = features.cpu().numpy() 
+
+        # Predict using the classifier
+        pred = classifier.predict(features_np)[0]
+        pred_label = inv_label_map.get(pred, "Unknown")
     
-    best_frame, best_bounding_box = get_best_frame(video, detection_model, 0.30, frame_interval)
+        probs = classifier.predict_proba(features_np)[0]
 
-    inv_label_map = {v: k for k, v in label_map.items()} 
-
-    # Load the image transformation
-    image = crop_bounding_box(Image.fromarray(cv.cvtColor(best_frame, cv.COLOR_BGR2RGB)).convert("RGB"), best_bounding_box)
-
-    input_tensor = transform(image).unsqueeze(0).to(device)
-
-    # Extract features
-    with torch.no_grad():
-        features = model_feat(input_tensor)
-        features_np = features.cpu().numpy() 
-
-    # Predict using the classifier
-    pred = classifier.predict(features_np)[0]
-    pred_label = inv_label_map.get(pred, "Unknown")
-  
-    probs = classifier.predict_proba(features_np)[0]
-
-    # Calculate confidence
-    confidence = probs[pred]
-
+        # Calculate confidence
+        confidence = probs[pred]
+    except Exception as e:
+        pred_label = None
+        confidence = None
     return pred_label, confidence
 
 

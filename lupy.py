@@ -17,6 +17,8 @@ def main(
     Use this tool to classify wildlife videos using MegaDetector and a custom classifier.
     """
 
+    #TODO: gestire i video vuoti e classificati, evitare di processarli di nuovo
+
     typer.echo("\n🚀 Starting Lupy...\n")
 
     try:
@@ -62,7 +64,12 @@ def main(
 
         results = myutils.classify_multiple_videos(video_folder, model_feat, classifier, detection_model, device)
 
+        if len(results) == 0:
+            typer.echo("\n⛔ No animal videos found in the specified folder.\n")
+            raise typer.Exit(code=1)
+
         for result in results:
+            
             video_path, best_label, best_conf = result
             filename = os.path.basename(video_path)
 
@@ -76,17 +83,18 @@ def main(
                 myutils.write_csv(video_path, best_label, confidence=best_conf, csv_file=write_csv)
 
         if write_csv:
-            typer.echo(f"\n💾 Logged all results to CSV: {write_csv}\n")
+            typer.echo(f"\n💾 Logged all results to CSV: {os.path.abspath(write_csv)}.csv\n")
         else:
             if typer.confirm("\n❓ Would you like to save the results to a CSV file?", default=False):
-                    csv_name = typer.prompt("\n✏️ Enter CSV filename (e.g., results.csv)")
+                    csv_name = typer.prompt("\n✏️  Enter CSV filename (e.g., results.csv)")
                     for result in results:
                         video_path, best_label, best_conf = result
                         typer.echo(f"  └ Saving {video_path} with label \'{best_label}\' and confidence {best_conf:.2f} to {csv_name}")
                         myutils.write_csv(video_path, best_label, confidence=best_conf, csv_file=csv_name)
-                    typer.echo(f"\n💾 Logged all results to CSV: {write_csv}\n")
+                    typer.echo(f"\n💾 Logged all results to CSV: {os.path.abspath(csv_name)}.csv\n")
 
-    typer.echo("🎉 Lupy processing complete! Thank you for using Lupy!\n")
+    typer.echo("\n🎉 Lupy processing complete! Thank you for using Lupy!\n")
     
 if __name__ == '__main__':
     typer.run(main)
+
