@@ -17,7 +17,7 @@ def main(
     Use this tool to classify wildlife videos using MegaDetector and a custom classifier.
     """
 
-    typer.echo("🚀 Starting Lupy...\n")
+    typer.echo("\n🚀 Starting Lupy...\n")
 
     try:
         model_feat, classifier, device, detection_model = myutils.model_setup()
@@ -32,16 +32,17 @@ def main(
 
     if video_path:
         typer.echo(f"🔍 Processing single video: {video_path}")
-        best_label, best_conf = myutils.classificate_single_video(video_path, model_feat, classifier, detection_model, device)
+        best_label, best_conf = myutils.classify_single_video(video_path, model_feat, classifier, detection_model, device)
+        filename = os.path.basename(video_path)
 
         if rename:
             myutils.rename_video(video_path, best_label)
 
+        typer.echo(f"  └ Video: {filename} -- Label: {best_label} (Confidence: {best_conf:.2f})")
+
         if write_csv:
             myutils.write_csv(video_path, best_label, confidence=best_conf, csv_file=write_csv)
-            typer.echo(f"💾 Logged to CSV: {write_csv}")
-
-        typer.echo(f"🎯 Video: {video_path}\n   ↪️  Prediction: {best_label} (Confidence: {best_conf:.2f})")
+            typer.echo(f"\n💾 Logged to CSV: {write_csv}")
 
     elif video_folder:
         typer.echo(f"📁 Processing all videos in folder: {video_folder}")
@@ -51,16 +52,16 @@ def main(
 
             video_path = os.path.join(video_folder, filename)
 
-            best_label, best_conf = myutils.classificate_single_video(video_path, model_feat, classifier, detection_model, device)
+            best_label, best_conf = myutils.classify_single_video(video_path, model_feat, classifier, detection_model, device)
 
             if rename:
                 myutils.rename_video(video_path, best_label)
 
+            typer.echo(f"  └ Video: {filename} -- Label: {best_label} (Confidence: {best_conf:.2f})")
+
             if write_csv:
                 myutils.write_csv(video_path, best_label, confidence=best_conf, csv_file=write_csv)
-                typer.echo(f"    💾 Logged to CSV: {write_csv}")
-
-            typer.echo(f"  └ Video: {filename} -- Label: {best_label} (Confidence: {best_conf:.2f})")
+                typer.echo(f"\n💾 Logged to CSV: {write_csv}")
 
 if __name__ == '__main__':
     typer.run(main)

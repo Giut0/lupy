@@ -26,7 +26,7 @@ def suppress_output():
             sys.stdout = old_stdout
             sys.stderr = old_stderr
 
-MODEL_PATH = "model/clf_model.joblib"
+MODEL_PATH = "model/model.joblib"
 CONFIDENCE_THRESHOLD_EARLY_STOP = 0.80
 
 frame_interval = 5  # Analyze every 5th frame
@@ -61,9 +61,9 @@ def model_setup():
         model_feat = model_feat.to(device)
         
         # Load the Logistic Regression classifier
-        clf = joblib.load(MODEL_PATH)
+        classifier = joblib.load(MODEL_PATH)
     
-    return model_feat, clf, device, detection_model
+    return model_feat, classifier, device, detection_model
 
 def write_csv(video_path, label, confidence, csv_file="predictions.csv"):
     """
@@ -157,13 +157,13 @@ def crop_bounding_box(frame, bounding_box):
     cropped = frame.crop((left, top, right, bottom))
     return cropped
 
-def classificate_single_video(video_path, model_feat, clf, detection_model, device, frame_interval=5):
+def classify_single_video(video_path, model_feat, classifier, detection_model, device, frame_interval=5):
     video = cv.VideoCapture(video_path)
     best_frame = None
     
     best_frame, best_bounding_box = get_best_frame(video, detection_model, 0.30, frame_interval)
 
-    inv_label_map = {v: k for k, v in label_map.items()}  # per decodifica
+    inv_label_map = {v: k for k, v in label_map.items()} 
 
     # Load the image transformation
     image = crop_bounding_box(Image.fromarray(cv.cvtColor(best_frame, cv.COLOR_BGR2RGB)).convert("RGB"), best_bounding_box)
@@ -173,13 +173,13 @@ def classificate_single_video(video_path, model_feat, clf, detection_model, devi
     # Extract features
     with torch.no_grad():
         features = model_feat(input_tensor)
-        features_np = features.cpu().numpy()  # converti in NumPy per scikit-learn
+        features_np = features.cpu().numpy() 
 
     # Predict using the classifier
-    pred = clf.predict(features_np)[0]
+    pred = classifier.predict(features_np)[0]
     pred_label = inv_label_map.get(pred, "Unknown")
   
-    probs = clf.predict_proba(features_np)[0]
+    probs = classifier.predict_proba(features_np)[0]
 
     # Calculate confidence
     confidence = probs[pred]
