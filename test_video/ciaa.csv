@@ -1,4 +1,0 @@
-video_path,label,confidence,timestamp
-"test_video/b.mp4",boar,0.49313,2025-07-08 18:13:56
-"test_video/c.mp4",fox,0.98386,2025-07-08 18:13:56
-"test_video/a.mp4",wolf,0.97574,2025-07-08 18:13:56

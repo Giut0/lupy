@@ -55,7 +55,7 @@ def main(
 
         if write_csv:
             myutils.write_csv(video_path, best_label, confidence=best_conf, csv_file=write_csv)
-            typer.echo(f"\n💾 Logged to CSV: {write_csv}")
+            typer.echo(f"\n💾 Logged to CSV: {write_csv}\n")
 
     elif video_folder:
         typer.echo(f"📁 Processing all videos in folder: {video_folder}")
