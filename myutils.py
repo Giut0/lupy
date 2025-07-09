@@ -74,27 +74,38 @@ def write_csv(video_path, label, confidence, csv_file="predictions.csv"):
     :param csv_file: Name of the CSV file to write to
     :return: None
     """
-    base, ext = os.path.splitext(video_path)
-    folder = os.path.dirname(base)
-    csv_path = f"{folder}/{csv_file}.csv"
-    timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    if not os.path.exists(csv_path):
-        with open(csv_path, 'w') as f:
-            f.write("video_path,label,confidence,timestamp\n")  # Write header
-    with open(csv_path, 'a') as f:
-        f.write(f"\"{video_path}\",{label},{confidence:.5f},{timestamp_str}\n")  # Append prediction
+    if label is not None:
+        base, ext = os.path.splitext(video_path)
+        folder = os.path.dirname(base)
+        csv_path = f"{folder}/{csv_file}.csv"
+        timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        if not os.path.exists(csv_path):
+            with open(csv_path, 'w') as f:
+                f.write("video_path,label,confidence,timestamp\n")  # Write header
+        with open(csv_path, 'a') as f:
+            f.write(f"\"{video_path}\",{label},{confidence:.5f},{timestamp_str}\n")  # Append prediction
 
 def rename_video(video_path, label):
     """
     Rename the video file based on the predicted label.
+    If a file with the new name already exists, add a counter to avoid overwriting.
     :param video_path: Path to the video file
     :param label: Predicted label
     :return: None
     """
     base, ext = os.path.splitext(video_path)
     folder = os.path.dirname(base)
-    new_name = f"{folder}/{label}{ext}"
+    new_name = os.path.join(folder, f"{label}{ext}")
+    counter = 1
+
+    # Increment the filename if it already exists
+    while os.path.exists(new_name):
+        new_name = os.path.join(folder, f"{label}_{counter+1}{ext}")
+        counter += 1
+
     os.rename(video_path, new_name)
+
+    return new_name
 
 def get_best_frame(video, detection_model, conf_threshold=0.30, frame_interval=5):
     """ Get the best frame from the video based on detection confidence.
@@ -160,30 +171,33 @@ def crop_bounding_box(frame, bounding_box):
 def classify_single_video(video_path, model_feat, classifier, detection_model, device, frame_interval=5):
     video = cv.VideoCapture(video_path)
     best_frame = None
+    best_bounding_box = []
+    try:
+        best_frame, best_bounding_box = get_best_frame(video, detection_model, 0.30, frame_interval)
+
+        inv_label_map = {v: k for k, v in label_map.items()} 
+
+        # Load the image transformation
+        image = crop_bounding_box(Image.fromarray(cv.cvtColor(best_frame, cv.COLOR_BGR2RGB)).convert("RGB"), best_bounding_box)
+
+        input_tensor = transform(image).unsqueeze(0).to(device)
+
+        # Extract features
+        with torch.no_grad():
+            features = model_feat(input_tensor)
+            features_np = features.cpu().numpy() 
+
+        # Predict using the classifier
+        pred = classifier.predict(features_np)[0]
+        pred_label = inv_label_map.get(pred, "Unknown")
     
-    best_frame, best_bounding_box = get_best_frame(video, detection_model, 0.30, frame_interval)
+        probs = classifier.predict_proba(features_np)[0]
 
-    inv_label_map = {v: k for k, v in label_map.items()} 
-
-    # Load the image transformation
-    image = crop_bounding_box(Image.fromarray(cv.cvtColor(best_frame, cv.COLOR_BGR2RGB)).convert("RGB"), best_bounding_box)
-
-    input_tensor = transform(image).unsqueeze(0).to(device)
-
-    # Extract features
-    with torch.no_grad():
-        features = model_feat(input_tensor)
-        features_np = features.cpu().numpy() 
-
-    # Predict using the classifier
-    pred = classifier.predict(features_np)[0]
-    pred_label = inv_label_map.get(pred, "Unknown")
-  
-    probs = classifier.predict_proba(features_np)[0]
-
-    # Calculate confidence
-    confidence = probs[pred]
-
+        # Calculate confidence
+        confidence = probs[pred]
+    except Exception as e:
+        pred_label = None
+        confidence = None
     return pred_label, confidence
 
 
