@@ -96,8 +96,9 @@ def main(
                     csv_name = typer.prompt("\n✏️  Enter CSV filename (e.g., results.csv)")
                     for result in results:
                         video_path, best_label, best_conf = result
-                        typer.echo(f"  └ Saving {video_path} with label \'{best_label}\' and confidence {best_conf:.2f} to {csv_name}")
-                        myutils.write_csv(video_path, best_label, confidence=best_conf, csv_file=csv_name)
+                        if best_label is not None:
+                            typer.echo(f"  └ Saving {video_path} with label \'{best_label}\' and confidence {best_conf:.2f} to {csv_name}")
+                            myutils.write_csv(video_path, best_label, confidence=best_conf, csv_file=csv_name)
                     typer.echo(f"\n💾 Logged all results to CSV: {video_folder}{csv_name}.csv\n")
 
     typer.echo("\n🎉 Lupy processing complete! Thank you for using Lupy!\n")
