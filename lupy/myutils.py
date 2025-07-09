@@ -26,7 +26,7 @@ def suppress_output():
             sys.stdout = old_stdout
             sys.stderr = old_stderr
 
-MODEL_PATH = "model/model.joblib"
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "model.joblib")
 CONFIDENCE_THRESHOLD_EARLY_STOP = 0.80
 
 frame_interval = 5  # Analyze every 5th frame
