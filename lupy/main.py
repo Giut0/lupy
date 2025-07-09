@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import typer
-import myutils
+from . import myutils
 import os
 
 def main(
@@ -28,7 +28,7 @@ def main(
 
     if version:
         typer.echo("📦 Current version: 1.0v\n")
-        raise typer.Exit()
+        raise typer.Exit(code=0)
 
     # Check if the file or folder exists
     if video_path:
@@ -90,7 +90,7 @@ def main(
                 myutils.write_csv(video_path, best_label, confidence=best_conf, csv_file=write_csv)
 
         if write_csv:
-            typer.echo(f"\n💾 Logged all results to CSV: {os.path.abspath(write_csv)}.csv\n")
+            typer.echo(f"\n💾 Logged all results to CSV: {video_folder}{write_csv}.csv\n")
         else:
             if typer.confirm("\n❓ Would you like to save the results to a CSV file?", default=False):
                     csv_name = typer.prompt("\n✏️  Enter CSV filename (e.g., results.csv)")
@@ -98,10 +98,14 @@ def main(
                         video_path, best_label, best_conf = result
                         typer.echo(f"  └ Saving {video_path} with label \'{best_label}\' and confidence {best_conf:.2f} to {csv_name}")
                         myutils.write_csv(video_path, best_label, confidence=best_conf, csv_file=csv_name)
-                    typer.echo(f"\n💾 Logged all results to CSV: {os.path.abspath(csv_name)}.csv\n")
+                    typer.echo(f"\n💾 Logged all results to CSV: {video_folder}{csv_name}.csv\n")
 
     typer.echo("\n🎉 Lupy processing complete! Thank you for using Lupy!\n")
-    
+
+def lupy():
+    typer.run(main)
+
+
 if __name__ == '__main__':
     typer.run(main)
 
