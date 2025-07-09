@@ -74,15 +74,16 @@ def write_csv(video_path, label, confidence, csv_file="predictions.csv"):
     :param csv_file: Name of the CSV file to write to
     :return: None
     """
-    base, ext = os.path.splitext(video_path)
-    folder = os.path.dirname(base)
-    csv_path = f"{folder}/{csv_file}.csv"
-    timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    if not os.path.exists(csv_path):
-        with open(csv_path, 'w') as f:
-            f.write("video_path,label,confidence,timestamp\n")  # Write header
-    with open(csv_path, 'a') as f:
-        f.write(f"\"{video_path}\",{label},{confidence:.5f},{timestamp_str}\n")  # Append prediction
+    if label is not None:
+        base, ext = os.path.splitext(video_path)
+        folder = os.path.dirname(base)
+        csv_path = f"{folder}/{csv_file}.csv"
+        timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        if not os.path.exists(csv_path):
+            with open(csv_path, 'w') as f:
+                f.write("video_path,label,confidence,timestamp\n")  # Write header
+        with open(csv_path, 'a') as f:
+            f.write(f"\"{video_path}\",{label},{confidence:.5f},{timestamp_str}\n")  # Append prediction
 
 def rename_video(video_path, label):
     """

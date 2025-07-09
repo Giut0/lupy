@@ -17,10 +17,8 @@ def main(
     Use this tool to classify wildlife videos using MegaDetector and a custom classifier.
     """
 
-    #TODO: gestire i video vuoti e classificati, evitare di processarli di nuovo
-
     typer.echo("\n🚀 Starting Lupy...\n")
-
+    # Model setup
     try:
         model_feat, classifier, device, detection_model = myutils.model_setup()
         typer.echo("✅ Model setup complete.\n")
@@ -45,9 +43,14 @@ def main(
         typer.echo("⛔ No video file or folder specified. Use --path or --folder.\n")
         raise typer.Exit(code=1)
 
+    # Single video processing
     if video_path:
         typer.echo(f"🔍 Processing single video: {video_path}")
         best_label, best_conf = myutils.classify_single_video(video_path, model_feat, classifier, detection_model, device)
+        if best_label is None or best_conf is None:
+            typer.echo("\n⛔ No animal detected in the video.\n")
+            raise typer.Exit(code=1)
+        
         filename = os.path.basename(video_path)
 
         if rename:
@@ -59,6 +62,7 @@ def main(
             myutils.write_csv(video_path, best_label, confidence=best_conf, csv_file=write_csv)
             typer.echo(f"\n💾 Logged to CSV: {write_csv}\n")
 
+    # Multiple videos processing
     elif video_folder:
         typer.echo(f"📁 Processing all videos in folder: {video_folder}")
 
@@ -71,6 +75,9 @@ def main(
         for result in results:
             
             video_path, best_label, best_conf = result
+            if best_label is None or best_conf is None:
+                typer.echo(f"\n⛔ No animal detected in video: {video_path}, skipping...\n")
+                continue
             filename = os.path.basename(video_path)
 
             if rename:
