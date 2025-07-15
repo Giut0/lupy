@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import typer
-from . import myutils
+import myutils
 import os
 
 def main(
@@ -9,14 +9,14 @@ def main(
     video_folder: str = typer.Option(None, "--folder", "-f", help="📁  Path to folder with multiple videos"),
     version: bool = typer.Option(False, "--version", "-v", help="🔢  Show current version"),
     rename: bool = typer.Option(False, "--rename", "-r", help="✏️  Rename video(s) using prediction"),
-    write_csv: str = typer.Option(None, "--csv", "-c", help="📄  Save results to a CSV file")
+    write_csv: str = typer.Option(None, "--csv", "-c", help="📄  Save results to a CSV file"),
+    save_datetime: bool = typer.Option(False, "--time", "-t", help="🗓️  Save extracted date and time from video")
 ):
     """
     🐾 Lupy - Camera Trap Video Classification Tool
 
     Use this tool to classify wildlife videos using MegaDetector and a custom classifier.
     """
-
     typer.echo("\n🚀 Starting Lupy...\n")
     # Model setup
     try:
@@ -46,7 +46,7 @@ def main(
     # Single video processing
     if video_path:
         typer.echo(f"🔍 Processing single video: {video_path}")
-        best_label, best_conf = myutils.classify_single_video(video_path, model_feat, classifier, detection_model, device)
+        best_label, best_conf, formatted_datetime = myutils.classify_single_video(video_path, model_feat, classifier, detection_model, device, save_datetime)
         if best_label is None or best_conf is None:
             typer.echo("\n⛔ No animal detected in the video.\n")
             raise typer.Exit(code=1)
@@ -56,17 +56,17 @@ def main(
         if rename:
             video_path = myutils.rename_video(video_path, best_label)
 
-        typer.echo(f"  └ Video: {filename} -- Label: {best_label} (Confidence: {best_conf:.2f})")
+        typer.echo(f"  └ Video: {filename} -- Label: {best_label} (Confidence: {best_conf:.2f}) -- Timestamp: {formatted_datetime}")
 
         if write_csv:
-            myutils.write_csv(video_path, best_label, confidence=best_conf, csv_file=write_csv)
+            myutils.write_csv(video_path, best_label, formatted_datetime, confidence=best_conf, formatted_datetime=formatted_datetime, csv_file=write_csv)
             typer.echo(f"\n💾 Logged to CSV: {write_csv}\n")
 
     # Multiple videos processing
     elif video_folder:
         typer.echo(f"📁 Processing all videos in folder: {video_folder}")
 
-        results = myutils.classify_multiple_videos(video_folder, model_feat, classifier, detection_model, device)
+        results = myutils.classify_multiple_videos(video_folder, model_feat, classifier, detection_model, device, save_datetime)
 
         if len(results) == 0:
             typer.echo("\n⛔ No animal videos found in the specified folder.\n")
@@ -74,7 +74,7 @@ def main(
 
         for result in results:
             
-            video_path, best_label, best_conf = result
+            video_path, best_label, best_conf, formatted_datetime = result
             if best_label is None or best_conf is None:
                 typer.echo(f"\n⛔ No animal detected in video: {video_path}, skipping...\n")
                 continue
@@ -84,10 +84,10 @@ def main(
                 video_path = myutils.rename_video(video_path, best_label)
 
 
-            typer.echo(f"  └ Video: {filename} -- Label: {best_label} (Confidence: {best_conf:.2f})")
+            typer.echo(f"  └ Video: {filename} -- Label: {best_label} (Confidence: {best_conf:.2f}) -- Timestamp: {formatted_datetime}")
 
             if write_csv:
-                myutils.write_csv(video_path, best_label, confidence=best_conf, csv_file=write_csv)
+                myutils.write_csv(video_path, best_label, confidence=best_conf, formatted_datetime=formatted_datetime, csv_file=write_csv)
 
         if write_csv:
             typer.echo(f"\n💾 Logged all results to CSV: {video_folder}{write_csv}.csv\n")
@@ -95,10 +95,10 @@ def main(
             if typer.confirm("\n❓ Would you like to save the results to a CSV file?", default=False):
                     csv_name = typer.prompt("\n✏️  Enter CSV filename (e.g., results.csv)")
                     for result in results:
-                        video_path, best_label, best_conf = result
+                        video_path, best_label, best_conf, formatted_datetime = result
                         if best_label is not None:
                             typer.echo(f"  └ Saving {video_path} with label \'{best_label}\' and confidence {best_conf:.2f} to {csv_name}")
-                            myutils.write_csv(video_path, best_label, confidence=best_conf, csv_file=csv_name)
+                            myutils.write_csv(video_path, best_label, confidence=best_conf, formatted_datetime=formatted_datetime, csv_file=csv_name)
                     typer.echo(f"\n💾 Logged all results to CSV: {video_folder}{csv_name}.csv\n")
 
     typer.echo("\n🎉 Lupy processing complete! Thank you for using Lupy!\n")

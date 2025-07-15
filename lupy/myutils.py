@@ -8,6 +8,10 @@ import cv2 as cv
 from PIL import Image
 import os
 import sys
+import cv2
+import pytesseract
+import re
+import numpy as np
 import contextlib
 from datetime import datetime
 from megadetector.detection import run_detector
@@ -26,10 +30,8 @@ def suppress_output():
             sys.stdout = old_stdout
             sys.stderr = old_stderr
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "model.joblib")
 CONFIDENCE_THRESHOLD_EARLY_STOP = 0.80
 
-frame_interval = 5  # Analyze every 5th frame
 # Define the image transformation
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -43,7 +45,6 @@ label_map = {
     'podolic_cow': 8, 'porcupine': 9, 'weasel': 10,
     'wolf': 11, 'other': 12
 }
-
 def model_setup():
     """ Load the feature extractor model and the classifier.
     :return: Tuple containing the feature extractor model, the classifier, and the device.
@@ -59,18 +60,22 @@ def model_setup():
         model_feat.reset_classifier(0)  # Remove classification head
         model_feat.eval()
         model_feat = model_feat.to(device)
+
+        os.environ['TESSDATA_PREFIX'] = 'lupy/model/tessdata'
+
         
         # Load the Logistic Regression classifier
-        classifier = joblib.load(MODEL_PATH)
+        classifier = joblib.load("lupy/models/classification_model.joblib")
     
     return model_feat, classifier, device, detection_model
 
-def write_csv(video_path, label, confidence, csv_file="predictions.csv"):
+def write_csv(video_path, label, confidence, formatted_datetime, csv_file="predictions.csv"):
     """
     Write the predicted label to a CSV file.
     :param video_path: Path to the video file
     :param label: Predicted label
     :param confidence: Confidence score of the prediction
+    :param formatted_datetime: Formatted date and time string
     :param csv_file: Name of the CSV file to write to
     :return: None
     """
@@ -78,12 +83,12 @@ def write_csv(video_path, label, confidence, csv_file="predictions.csv"):
         base, ext = os.path.splitext(video_path)
         folder = os.path.dirname(base)
         csv_path = f"{folder}/{csv_file}.csv"
-        timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        detection_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         if not os.path.exists(csv_path):
             with open(csv_path, 'w') as f:
-                f.write("video_path,label,confidence,timestamp\n")  # Write header
+                f.write("video_path,label,confidence,video_timestamp,detection_timestamp\n")  # Write header
         with open(csv_path, 'a') as f:
-            f.write(f"\"{video_path}\",{label},{confidence:.5f},{timestamp_str}\n")  # Append prediction
+            f.write(f"\"{video_path}\",{label},{confidence:.5f},{formatted_datetime},{detection_timestamp}\n")  # Append prediction
 
 def rename_video(video_path, label):
     """
@@ -168,12 +173,28 @@ def crop_bounding_box(frame, bounding_box):
     cropped = frame.crop((left, top, right, bottom))
     return cropped
 
-def classify_single_video(video_path, model_feat, classifier, detection_model, device, frame_interval=5):
+def classify_single_video(video_path, model_feat, classifier, detection_model, device, save_datetime=False, frame_interval=5):
+    """ Classify a single video and return the best label and confidence.
+    :param video_path: Path to the video file
+    :param model_feat: Feature extractor model
+    :param classifier: Classifier model
+    :param detection_model: Object detection model
+    :param device: Device to run the model on ('cpu' or 'cuda')
+    :param save_datetime: Flag to save date and time from the video
+    :param frame_interval: Interval to skip frames (e.g., analyze every 5th frame)
+    :return: Tuple with best label, confidence, and formatted date/time string
+    """
     video = cv.VideoCapture(video_path)
     best_frame = None
     best_bounding_box = []
+    formatted_datetime = None
     try:
         best_frame, best_bounding_box = get_best_frame(video, detection_model, 0.30, frame_interval)
+
+        if save_datetime:
+            date, time = extract_datetime(best_frame)
+            if date and time:
+                formatted_datetime = format_datetime(date, time)
 
         inv_label_map = {v: k for k, v in label_map.items()} 
 
@@ -198,14 +219,109 @@ def classify_single_video(video_path, model_feat, classifier, detection_model, d
     except Exception as e:
         pred_label = None
         confidence = None
-    return pred_label, confidence
 
+    return pred_label, confidence, formatted_datetime
 
-def classify_multiple_videos(video_folder, model_feat, classifier, detection_model, device, frame_interval=5):
+def classify_multiple_videos(video_folder, model_feat, classifier, detection_model, device, save_datetime=False, frame_interval=5):
+    """ Classify multiple videos in a folder and return results.
+    :param video_folder: Path to the folder containing video files
+    :param model_feat: Feature extractor model
+    :param classifier: Classifier model
+    :param detection_model: Object detection model
+    :param device: Device to run the model on ('cpu' or 'cuda')
+    :param save_datetime: Flag to save date and time from the video
+    :param frame_interval: Interval to skip frames (e.g., analyze every 5th frame)
+    :return: List of tuples with video path, best label, confidence, and formatted date/time string
+    """
     results = []
     for filename in os.listdir(video_folder):
         if filename.endswith(('.mp4', '.avi', '.mov')):
             video_path = os.path.join(video_folder, filename)
-            best_label, best_conf = classify_single_video(video_path, model_feat, classifier, detection_model, device, frame_interval)
-            results.append((video_path, best_label, best_conf))
+            best_label, best_conf, formatted_datetime = classify_single_video(video_path, model_feat, classifier, detection_model, device, save_datetime, frame_interval)
+            results.append((video_path, best_label, best_conf, formatted_datetime))
     return results
+
+def format_datetime(date_str, time_str):
+    """Converts date/time from OCR into standard ISO format: '%Y-%m-%d %H:%M:%S'
+    :param date_str: Date string from OCR
+    :param time_str: Time string from OCR
+    :return: Formatted date/time string or None if no format matches
+    """
+    # Try different common formats
+    for date_fmt in ['%d/%m/%Y', '%d-%m-%Y', '%d.%m.%Y',
+                     '%d/%m/%y', '%d-%m-%y', '%d.%m.%y',
+                     '%Y/%m/%d', '%Y-%m-%d']:
+        try:
+            dt = datetime.strptime(f"{date_str} {time_str}", f"{date_fmt} %H:%M:%S")
+            return dt.strftime('%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            continue
+
+    return None
+
+def extract_datetime_pattern(ocr_text):
+    """ Extract date and time from OCR text using regex patterns.
+    :param ocr_text: Text extracted from OCR
+    :return: Tuple with date and time strings or (None, None) if not found
+    """
+    ocr_text = re.sub(r'(\d{2}:\d{2})\s?:\s?(\d{2})', r'\1:\2', ocr_text)
+
+    date_time_patterns = [
+        r"\b(?P<time>\d{2}[:\-]\d{2}[:\-]\d{2})[ ]+(?P<date>\d{2}[\/\-\.]\d{1,3}[\/\-\.]\d{2,4})\b",
+        r"\b(?P<time>\d{2}[:\-]\d{2}[:\-]\d{2})[ ]+(?P<date>\d{4}[\/\-\.]\d{2}[\/\-\.]\d{2})\b",
+        r"\b(?P<date>\d{2}[\/\-\.]\d{2}[\/\-\.]\d{4})[ ]+(?P<time>\d{2}[:\-]\d{2}[:\-]\d{2})\b",
+        r"\b(?P<date>\d{4}[\/\-\.]\d{2}[\/\-\.]\d{2})[ ]+(?P<time>\d{2}[:\-]\d{2}[:\-]\d{2})\b",
+        r"\b(?P<date>\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2})[ ]+(?P<time>\d{2}[:\-]\d{2}[:\-]\d{2})\b",
+    ]
+
+    for pattern in date_time_patterns:
+        match = re.search(pattern, ocr_text)
+        if match:
+            return match.group('date'), match.group('time')
+
+    return None, None
+
+def preprocess(img):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    return [
+        gray,
+        cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1],
+        cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2),
+        cv2.bitwise_not(gray)
+    ]
+
+def extract_from_region(region):
+    """ Apply OCR and search for date/time in the region """
+    for proc in preprocess(region):
+        text = pytesseract.image_to_string(proc, config="--psm 6", lang='eng+ita')
+
+        text = pytesseract.image_to_string(proc, config="--psm 6")
+        date, time = extract_datetime_pattern(text)
+
+        if date and time:
+            return date, time
+    return None, None
+
+def extract_datetime(img):
+    """ Extract date and time from the image using OCR.
+    :param img: Path to the image file or OpenCV image object
+    :return: Tuple with date and time strings or (None, None) if not found
+    """
+    if img is None:
+        return None, None
+
+    h, w = img.shape[:2]
+
+    # Lower part (last strip of the image)
+    lower = img[int(h * 0.80):, :]
+    date, time = extract_from_region(lower)
+    if date and time:
+        return date, time
+
+    # Higher part (first strip)
+    upper = img[:int(h * 0.20), :]
+    date, time = extract_from_region(upper)
+    if date and time:
+        return date, time
+
+    return None, None

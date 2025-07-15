@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="lupy",
-    version="0.1.0",
+    version="0.1.1",
     description="Camera Trap Video Classification Tool",
     author="Vito Proscia",
     packages=find_packages(),
@@ -16,6 +16,7 @@ setup(
         "opencv-python>=4.7.0",
         "typer>=0.9.0",
         "megadetector>=5.0.0",
+        "pytesseract>=0.3.8"
     ],
     entry_points={
         "console_scripts": [
@@ -23,7 +24,7 @@ setup(
         ],
     },
     package_data={
-        "lupy": ["model/*.joblib"],
+        "lupy": ["models/*"],
     },
     classifiers=[
         "Programming Language :: Python :: 3",
