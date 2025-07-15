@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import typer
-import myutils
+from . import myutils
 import os
 
 def main(
