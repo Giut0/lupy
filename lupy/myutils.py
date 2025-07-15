@@ -61,7 +61,7 @@ def model_setup():
         model_feat.eval()
         model_feat = model_feat.to(device)
 
-        os.environ['TESSDATA_PREFIX'] = 'lupy/model/tessdata'
+        os.environ['TESSDATA_PREFIX'] = 'lupy/models/tessdata'
 
         
         # Load the Logistic Regression classifier
