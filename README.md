@@ -15,6 +15,7 @@ It uses **computer vision** to automatically detect animals and assign class lab
 - ✏️ Rename videos based on AI predictions
 - 📄 Export classification results to CSV
 - ⚙️ Combines **MegaDetector** with a **custom classifier**
+- 🔍 Tesseract OCR engine using **pytesseract**
 
 ---
 
@@ -44,7 +45,29 @@ cd lupy
 pip install .
 ```
 
-This will install the CLI tool globally as `lupy`.
+### 3. Install `tesseract`
+### 🪟 Windows
+
+1. Download the precompiled binary:
+
+   👉 https://github.com/UB-Mannheim/tesseract/wiki
+
+2. Install it (or unzip the portable `.zip` version).
+### 🐧 Linux
+
+#### Debian / Ubuntu
+
+```bash
+sudo apt update
+sudo apt install tesseract-ocr
+```
+
+#### Arch / Manjaro
+
+```bash
+sudo pacman -S tesseract
+```
+
 
 ## 🧪 Usage
 
@@ -82,6 +105,13 @@ lupy -p /path/to/video.mp4 --rename
 lupy -f /path/to/folder/ --rename
 ```
 
+### Extract video timestamp
+```bash
+lupy -p /path/to/video.mp4 -t
+# or
+lupy -f /path/to/folder/ -t
+```
+
 ### Export results to CSV
 
 ```bash
@@ -100,6 +130,7 @@ lupy -f /path/to/folder/ --rename --csv results
 - Python 3.8+
 - Deep learning model files (MegaDetector + custom classifier)
 - Python dependencies (installed via `pip install -r requirements.txt`)
+- Tesseract OCR
 
 ## 🤖 AI Model & Training Details
 
