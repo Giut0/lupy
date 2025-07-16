@@ -27,7 +27,7 @@ def main(
         raise typer.Exit(code=1)
 
     if version:
-        typer.echo("📦 Current version: 1.0v\n")
+        typer.echo("📦 Current version: 1.1v\n")
         raise typer.Exit(code=0)
 
     # Check if the file or folder exists
@@ -82,7 +82,6 @@ def main(
 
             if rename:
                 video_path = myutils.rename_video(video_path, best_label)
-
 
             typer.echo(f"  └ Video: {filename} -- Label: {best_label} (Confidence: {best_conf:.2f}) -- Timestamp: {formatted_datetime}")
 

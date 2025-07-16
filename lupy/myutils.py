@@ -61,11 +61,10 @@ def model_setup():
         model_feat.eval()
         model_feat = model_feat.to(device)
 
-        os.environ['TESSDATA_PREFIX'] = 'lupy/models/tessdata'
-
+        os.environ['TESSDATA_PREFIX'] = os.path.join(os.path.dirname(__file__), "models", "tessdata")
         
         # Load the Logistic Regression classifier
-        classifier = joblib.load("lupy/models/classification_model.joblib")
+        classifier = joblib.load(os.path.join(os.path.dirname(__file__), "models", "model.joblib"))
     
     return model_feat, classifier, device, detection_model
 
