@@ -197,7 +197,7 @@ def draw_bbox(image, bbox, label, confidence):
     # Put label
     cv2.putText(img, text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
 
-    return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB)).convert("RGB")
+    return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 
 def classify_single_video(video_path, model_feat, classifier, detection_model, device, save_datetime=False, img_save=False, frame_interval=5):
     """ Classify a single video and return the best label and confidence.
@@ -226,7 +226,7 @@ def classify_single_video(video_path, model_feat, classifier, detection_model, d
         inv_label_map = {v: k for k, v in label_map.items()}
 
 
-        best_img = Image.fromarray(cv.cvtColor(best_frame, cv.COLOR_BGR2RGB)).convert("RGB")
+        best_img = Image.fromarray(cv.cvtColor(best_frame, cv.COLOR_BGR2RGB))
         # Load the image transformation
         image = crop_bounding_box(best_img, best_bounding_box)
 
@@ -253,14 +253,15 @@ def classify_single_video(video_path, model_feat, classifier, detection_model, d
         
             base_name = os.path.splitext(os.path.basename(video_path))[0]
 
-            img_path = os.path.join(img_save, base_name + ".jpg")
+            img_path = os.path.join(img_save, base_name + ".png")
 
             annotate_frame = draw_bbox(best_img, best_bounding_box, pred_label, confidence)
-            annotate_frame.save(img_path)
+            annotate_frame.save(img_path, compress_level=0)
 
     except Exception as e:
         pred_label = None
         confidence = None
+        print(f"Error processing video {video_path}: {e}")
 
     return pred_label, confidence, formatted_datetime
 
