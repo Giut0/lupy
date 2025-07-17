@@ -1,19 +1,18 @@
-import torch
-from torchvision import transforms
-from PIL import Image
-import joblib
-import timm
-import warnings
-import cv2 as cv
-from PIL import Image
 import os
+import re
 import sys
 import cv2
-import pytesseract
-import re
-import numpy as np
+import timm
+import torch
+import joblib
+import warnings
+import cv2 as cv
 import contextlib
+import pytesseract
+import numpy as np
+from PIL import Image
 from datetime import datetime
+from torchvision import transforms
 from megadetector.detection import run_detector
 warnings.filterwarnings("ignore")
 
@@ -261,7 +260,6 @@ def classify_single_video(video_path, model_feat, classifier, detection_model, d
     except Exception as e:
         pred_label = None
         confidence = None
-        print(f"Error processing video {video_path}: {e}")
 
     return pred_label, confidence, formatted_datetime
 
