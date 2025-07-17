@@ -24,7 +24,7 @@ setup(
         ],
     },
     package_data={
-        "lupy": ["models/*"],
+        "lupy": ["models/*", 'models/tessdata/*.traineddata'],
     },
     classifiers=[
         "Programming Language :: Python :: 3",
