@@ -16,6 +16,7 @@ It uses **computer vision** to automatically detect animals and assign class lab
 - 📄 Export classification results to CSV
 - ⚙️ Combines **MegaDetector** with a **custom classifier**
 - 🔍 Tesseract OCR engine using **pytesseract**
+- 🖼️ Save **annotated** images from video
 
 ---
 
@@ -110,6 +111,13 @@ lupy -f /path/to/folder/ --rename
 lupy -p /path/to/video.mp4 -t
 # or
 lupy -f /path/to/folder/ -t
+```
+
+### Save annotated images
+```bash
+lupy -p /path/to/video.mp4 -i /path/to/img_folder/
+# or
+lupy -f /path/to/folder/ -i /path/to/img_folder/
 ```
 
 ### Export results to CSV
