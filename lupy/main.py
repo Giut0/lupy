@@ -10,7 +10,8 @@ def main(
     version: bool = typer.Option(False, "--version", "-v", help="🔢  Show current version"),
     rename: bool = typer.Option(False, "--rename", "-r", help="✏️  Rename video(s) using prediction"),
     write_csv: str = typer.Option(None, "--csv", "-c", help="📄  Save results to a CSV file"),
-    save_datetime: bool = typer.Option(False, "--time", "-t", help="🗓️  Save extracted date and time from video")
+    save_datetime: bool = typer.Option(False, "--time", "-t", help="🗓️  Save extracted date and time from video"),
+    img_save: str = typer.Option(None, "--img-save", "-i", help="🖼️  Save images from video frames"),
 ):
     """
     🐾 Lupy - Camera Trap Video Classification Tool
@@ -27,7 +28,7 @@ def main(
         raise typer.Exit(code=1)
 
     if version:
-        typer.echo("📦 Current version: 1.1v\n")
+        typer.echo("📦 Current version: 1.2v\n")
         raise typer.Exit(code=0)
 
     # Check if the file or folder exists
@@ -46,7 +47,7 @@ def main(
     # Single video processing
     if video_path:
         typer.echo(f"🔍 Processing single video: {video_path}")
-        best_label, best_conf, formatted_datetime = myutils.classify_single_video(video_path, model_feat, classifier, detection_model, device, save_datetime)
+        best_label, best_conf, formatted_datetime = myutils.classify_single_video(video_path, model_feat, classifier, detection_model, device, save_datetime, img_save)
         if best_label is None or best_conf is None:
             typer.echo("\n⛔ No animal detected in the video.\n")
             raise typer.Exit(code=1)
@@ -57,6 +58,8 @@ def main(
             video_path = myutils.rename_video(video_path, best_label)
 
         typer.echo(f"  └ Video: {filename} -- Label: {best_label} (Confidence: {best_conf:.2f}) -- Timestamp: {formatted_datetime}")
+        if img_save is not None:
+            typer.echo(f"\n💾 Annotated image saved: {img_save}\n")
 
         if write_csv:
             myutils.write_csv(video_path, best_label, formatted_datetime, confidence=best_conf, formatted_datetime=formatted_datetime, csv_file=write_csv)
@@ -66,7 +69,7 @@ def main(
     elif video_folder:
         typer.echo(f"📁 Processing all videos in folder: {video_folder}")
 
-        results = myutils.classify_multiple_videos(video_folder, model_feat, classifier, detection_model, device, save_datetime)
+        results = myutils.classify_multiple_videos(video_folder, model_feat, classifier, detection_model, device, save_datetime, img_save)
 
         if len(results) == 0:
             typer.echo("\n⛔ No animal videos found in the specified folder.\n")
@@ -84,6 +87,9 @@ def main(
                 video_path = myutils.rename_video(video_path, best_label)
 
             typer.echo(f"  └ Video: {filename} -- Label: {best_label} (Confidence: {best_conf:.2f}) -- Timestamp: {formatted_datetime}")
+
+            if img_save is not None:
+                typer.echo(f"\n💾 All annotated image saved: {img_save}\n")
 
             if write_csv:
                 myutils.write_csv(video_path, best_label, confidence=best_conf, formatted_datetime=formatted_datetime, csv_file=write_csv)

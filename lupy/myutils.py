@@ -1,19 +1,18 @@
-import torch
-from torchvision import transforms
-from PIL import Image
-import joblib
-import timm
-import warnings
-import cv2 as cv
-from PIL import Image
 import os
+import re
 import sys
 import cv2
-import pytesseract
-import re
-import numpy as np
+import timm
+import torch
+import joblib
+import warnings
+import cv2 as cv
 import contextlib
+import pytesseract
+import numpy as np
+from PIL import Image
 from datetime import datetime
+from torchvision import transforms
 from megadetector.detection import run_detector
 warnings.filterwarnings("ignore")
 
@@ -172,7 +171,34 @@ def crop_bounding_box(frame, bounding_box):
     cropped = frame.crop((left, top, right, bottom))
     return cropped
 
-def classify_single_video(video_path, model_feat, classifier, detection_model, device, save_datetime=False, frame_interval=5):
+def draw_bbox(image, bbox, label, confidence):
+    """ Draw bounding box and label on the image.
+    :param image: PIL Image object
+    :param bbox: Bounding box coordinates (x_min, y_min, width, height)
+    :param label: Predicted label
+    :param confidence: Confidence score
+    :return: Annotated PIL Image
+    """
+    img = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+
+    h, w, _ = img.shape
+    x_min, y_min, box_w, box_h = bbox
+    x1 = int(x_min * w)
+    y1 = int(y_min * h)
+    x2 = int((x_min + box_w) * w)
+    y2 = int((y_min + box_h) * h)
+
+    text = f"{label} ({confidence:.2f})"
+    color = (0, 0, 255)  # Red
+
+    # Draw box
+    cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+    # Put label
+    cv2.putText(img, text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
+
+    return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+
+def classify_single_video(video_path, model_feat, classifier, detection_model, device, save_datetime=False, img_save=False, frame_interval=5):
     """ Classify a single video and return the best label and confidence.
     :param video_path: Path to the video file
     :param model_feat: Feature extractor model
@@ -180,6 +206,7 @@ def classify_single_video(video_path, model_feat, classifier, detection_model, d
     :param detection_model: Object detection model
     :param device: Device to run the model on ('cpu' or 'cuda')
     :param save_datetime: Flag to save date and time from the video
+    :param img_save: Directory to save annotated images, or False to skip saving
     :param frame_interval: Interval to skip frames (e.g., analyze every 5th frame)
     :return: Tuple with best label, confidence, and formatted date/time string
     """
@@ -195,10 +222,12 @@ def classify_single_video(video_path, model_feat, classifier, detection_model, d
             if date and time:
                 formatted_datetime = format_datetime(date, time)
 
-        inv_label_map = {v: k for k, v in label_map.items()} 
+        inv_label_map = {v: k for k, v in label_map.items()}
 
+
+        best_img = Image.fromarray(cv.cvtColor(best_frame, cv.COLOR_BGR2RGB))
         # Load the image transformation
-        image = crop_bounding_box(Image.fromarray(cv.cvtColor(best_frame, cv.COLOR_BGR2RGB)).convert("RGB"), best_bounding_box)
+        image = crop_bounding_box(best_img, best_bounding_box)
 
         input_tensor = transform(image).unsqueeze(0).to(device)
 
@@ -215,13 +244,26 @@ def classify_single_video(video_path, model_feat, classifier, detection_model, d
 
         # Calculate confidence
         confidence = probs[pred]
+        # Annotated img saving
+        if img_save and best_frame is not None:
+
+            if not os.path.exists(img_save):
+                os.makedirs(img_save)
+        
+            base_name = os.path.splitext(os.path.basename(video_path))[0]
+
+            img_path = os.path.join(img_save, base_name + ".png")
+
+            annotate_frame = draw_bbox(best_img, best_bounding_box, pred_label, confidence)
+            annotate_frame.save(img_path, compress_level=0)
+
     except Exception as e:
         pred_label = None
         confidence = None
 
     return pred_label, confidence, formatted_datetime
 
-def classify_multiple_videos(video_folder, model_feat, classifier, detection_model, device, save_datetime=False, frame_interval=5):
+def classify_multiple_videos(video_folder, model_feat, classifier, detection_model, device, save_datetime=False, img_save=False, frame_interval=5):
     """ Classify multiple videos in a folder and return results.
     :param video_folder: Path to the folder containing video files
     :param model_feat: Feature extractor model
@@ -229,6 +271,7 @@ def classify_multiple_videos(video_folder, model_feat, classifier, detection_mod
     :param detection_model: Object detection model
     :param device: Device to run the model on ('cpu' or 'cuda')
     :param save_datetime: Flag to save date and time from the video
+    :param img_save: Directory to save annotated images, or False to skip saving
     :param frame_interval: Interval to skip frames (e.g., analyze every 5th frame)
     :return: List of tuples with video path, best label, confidence, and formatted date/time string
     """
@@ -236,7 +279,7 @@ def classify_multiple_videos(video_folder, model_feat, classifier, detection_mod
     for filename in os.listdir(video_folder):
         if filename.endswith(('.mp4', '.avi', '.mov')):
             video_path = os.path.join(video_folder, filename)
-            best_label, best_conf, formatted_datetime = classify_single_video(video_path, model_feat, classifier, detection_model, device, save_datetime, frame_interval)
+            best_label, best_conf, formatted_datetime = classify_single_video(video_path, model_feat, classifier, detection_model, device, save_datetime, img_save, frame_interval)
             results.append((video_path, best_label, best_conf, formatted_datetime))
     return results
 
