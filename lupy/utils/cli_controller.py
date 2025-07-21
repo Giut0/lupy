@@ -2,8 +2,8 @@ import os
 import sys
 import typer
 import contextlib
-from lupy.file_ops import rename_video, write_to_csv
-from lupy.video_classification import classify_multiple_videos, classify_single_video
+from lupy.utils.file_ops import rename_video, write_to_csv
+from lupy.models.video_classification import classify_multiple_videos, classify_single_video
 
 def handle_single_video(video_path, model_feat, classifier, detection_model, device, rename, write_csv, save_datetime, img_save):
     typer.echo(f"🔍 Processing single video: {video_path}")
@@ -47,7 +47,7 @@ def handle_multiple_videos(video_folder, model_feat, classifier, detection_model
 
     for video_path, best_label, best_conf, formatted_datetime in results:
         if best_label is None or best_conf is None:
-            typer.echo(f"\n⚠️ No animal detected in video: {video_path}, skipping...\n")
+            typer.echo(f"  └ ⚠️ No animal detected in video: {video_path}, skipping...")
             continue
 
         filename = os.path.basename(video_path)
@@ -81,7 +81,7 @@ def handle_multiple_videos(video_folder, model_feat, classifier, detection_model
                     formatted_datetime=formatted_datetime,
                     csv_file=csv_name
                 )
-        typer.echo(f"\n💾 Logged all results to CSV: {video_folder}{csv_name}.csv\n")
+        typer.echo(f"\n💾 Logged all results to CSV: {video_folder}/{csv_name}.csv\n")
 
 @contextlib.contextmanager
 def suppress_output():

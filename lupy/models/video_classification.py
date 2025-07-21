@@ -2,9 +2,9 @@ import os
 import torch
 import cv2 as cv
 from PIL import Image
-from lupy.constants import label_map, transform
-from lupy.datetime_extraction import extract_datetime, format_datetime
-from lupy.video_processing import crop_bounding_box, draw_bbox, get_best_frame
+from lupy.utils.constants import label_map, transform
+from lupy.utils.datetime_extraction import extract_datetime, format_datetime
+from lupy.utils.video_processing import crop_bounding_box, draw_bbox, get_best_frame
 
 def classify_single_video(video_path, model_feat, classifier, detection_model, device, save_datetime=False, img_save=False, frame_interval=5):
     """ Classify a single video and return the best label and confidence.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 import typer
-from lupy import cli_controller
+from lupy.utils import cli_controller
 from lupy.models.setup import models_setup
 
 
