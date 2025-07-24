@@ -5,6 +5,8 @@ import streamlit as st
 from lupy.utils.file_ops import save_csv
 from lupy.models.setup import models_setup
 from lupy.models.video_classification import classify_single_video
+import logging
+logging.getLogger("timm").setLevel(logging.ERROR)
 
 # Model setup
 model_feat, classifier, device, detection_model = models_setup()
@@ -143,3 +145,9 @@ if len(st.session_state.results) > 0:
 else:
     if video_files:
         st.info("➡️ Click 'Run analysis on all videos' to generate results.")
+
+# Exit button
+st.markdown("---")
+if st.button("🛑 Exit application"):
+    st.info("⛔ Exiting the application...")
+    os._exit(0)

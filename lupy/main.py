@@ -3,6 +3,12 @@ import os
 import typer
 from lupy.utils import cli_controller
 from lupy.models.setup import models_setup
+import subprocess
+import os
+
+def launch_gui():
+    streamlit_app_path = os.path.join(os.path.dirname(__file__), "UI.py")
+    subprocess.run(["streamlit", "run", streamlit_app_path])
 
 
 def main(
@@ -13,6 +19,7 @@ def main(
     write_csv: str = typer.Option(None, "--csv", "-c", help="📄  Save results to a CSV file"),
     save_datetime: bool = typer.Option(False, "--time", "-t", help="🗓️  Save extracted date and time from video"),
     img_save: str = typer.Option(None, "--img-save", "-i", help="🖼️  Save images from video frames"),
+    gui: bool = typer.Option(False, "--gui", "-g", help="🖥️  Launch GUI (Streamlit) instead of CLI")
 ):
     """
     🐾 Lupy - Camera Trap Video Classification Tool
@@ -21,6 +28,11 @@ def main(
 
     if version:
         typer.echo("📦 Current version: 1.3v\n")
+        raise typer.Exit(code=0)
+    
+    if gui:
+        typer.echo("🖥️ Launching GUI...")
+        launch_gui()
         raise typer.Exit(code=0)
 
     # Model setup
