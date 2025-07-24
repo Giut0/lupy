@@ -54,3 +54,20 @@ def rename_video(video_path, label):
     os.rename(video_path, new_name)
 
     return new_name
+
+def save_csv(results=None, csv_file="predictions.csv"):
+    """
+    Save the results to a CSV file.
+    :param results: List of tuples containing video name, label, confidence, datetime, and video path
+    :param csv_file: Name of the CSV file to save results
+    :return: None
+    """
+    if results is None:
+        return
+    with open(csv_file, 'w') as f:
+        f.write("video_path,label,confidence,video_timestamp,detection_timestamp\n")
+        for name, label, conf, dt, _ in results:
+            if label is None:
+                continue
+            detection_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            f.write(f"\"{name}\",{label},{conf:.5f},{dt},{detection_timestamp}\n")

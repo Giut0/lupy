@@ -1,54 +1,62 @@
-from lupy.models.setup import models_setup
-import streamlit as st
-import tempfile
-from lupy.models.video_classification import classify_single_video
-import os
-from datetime import datetime
-import zipfile
 
+import os
+import zipfile
+import streamlit as st
+from lupy.utils.file_ops import save_csv
+from lupy.models.setup import models_setup
+from lupy.models.video_classification import classify_single_video
+
+# Model setup
 model_feat, classifier, device, detection_model = models_setup()
 
-def save_csv(results=None, csv_file="predictions.csv"):
-    if results is None:
-        return
-    with open(csv_file, 'w') as f:
-        f.write("video_path,label,confidence,video_timestamp,detection_timestamp\n")
-        for name, label, conf, dt, _ in results:
-            if label is None:
-                continue
-            detection_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            f.write(f"\"{name}\",{label},{conf:.5f},{dt},{detection_timestamp}\n")
+img_dir = "annotated_frames"
+video_dir = "uploaded_videos"
+os.makedirs(img_dir, exist_ok=True)
+os.makedirs(video_dir, exist_ok=True)
 
 st.title("🐾 Lupy - Camera Trap Video Classification Tool")
 
-# Session state for results and bytes
 if "results" not in st.session_state:
     st.session_state.results = []
 if "single_video_bytes" not in st.session_state:
     st.session_state.single_video_bytes = None
 
-# File upload
+# Upload video
 video_files = st.file_uploader("Upload one or more videos", type=["mp4", "avi", "mov"], accept_multiple_files=True)
 
-# Directory to save annotated images
-img_dir = "annotated_frames"
-os.makedirs(img_dir, exist_ok=True)
-
-# Show player if single video is uploaded
+# Single Video Player
 if video_files and len(video_files) == 1:
     video_file = video_files[0]
     video_bytes = video_file.read()
     st.video(video_bytes)
     st.session_state.single_video_bytes = video_bytes
 
-# Run analysis
+# Clear cache buttons
+st.markdown("---")
+if st.button("🧹 Clear cache (uploaded videos + annotated frames)"):
+    try:
+        for f in os.listdir(video_dir):
+            os.remove(os.path.join(video_dir, f))
+        os.rmdir(video_dir)
+    except Exception:
+        pass
+
+    try:
+        for f in os.listdir(img_dir):
+            os.remove(os.path.join(img_dir, f))
+    except Exception:
+        pass
+
+    st.success("🧼 Cache cleared!")
+
+# Video classification
 if video_files:
     st.write(f"📦 {len(video_files)} video(s) uploaded.")
     if st.button("Run analysis on all videos"):
         with st.spinner("Processing videos..."):
             st.session_state.results = []
 
-            # Clean up old temporary images
+            # Old temporary files cleanup
             for file in os.listdir(img_dir):
                 if "tmp" in file.lower():
                     try:
@@ -62,9 +70,12 @@ if video_files:
                 else:
                     video_bytes = video_file.read()
 
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tfile:
-                    tfile.write(video_bytes)
-                    video_path = tfile.name
+                video_name = os.path.basename(video_file.name)
+                video_path = os.path.join(video_dir, video_name)
+                os.makedirs(video_dir, exist_ok=True)
+
+                with open(video_path, "wb") as f:
+                    f.write(video_bytes)
 
                 try:
                     label, conf, dt = classify_single_video(
@@ -84,51 +95,51 @@ if video_files:
 
         st.success("✅ Analysis completed!")
 
-# Show results if available
-if len(st.session_state.results) > 1:
+# Mostra risultati
+if len(st.session_state.results) > 0:
+    # Show results 
     st.markdown("---")
-    st.header("📄 Textual Results")
+    st.header("📊 Summary of Results")
     for name, label, conf, dt, _ in st.session_state.results:
         if label is None:
             continue
         st.write(f'• Video: `{name}` → Label: `{label}` (`{conf:.2f}` conf.) - 📅 Timestamp: `{dt or "n/a"}`')
 
+    if len(st.session_state.results) > 1:
+        # Export results
+        st.markdown("---")
+        st.subheader("📤 Export Results")
 
-    # Export section
-    st.markdown("---")
-    st.subheader("📤 Export Results")
+        # CSV Download
+        csv_path = "predictions.csv"
+        save_csv(st.session_state.results, csv_path)
+        with open(csv_path, "rb") as f:
+            st.download_button(
+                label="📄 Download predictions.csv",
+                data=f,
+                file_name="predictions.csv",
+                mime="text/csv"
+            )
 
-    # CSV Download
-    csv_path = "predictions.csv"
-    save_csv(st.session_state.results, csv_path)
-    with open(csv_path, "rb") as f:
-        st.download_button(
-            label="📄 Download predictions.csv",
-            data=f,
-            file_name="predictions.csv",
-            mime="text/csv"
-        )
+        # Annotated img ZIP Download 
+        zip_path = os.path.join(img_dir, "annotated_images.zip")
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
 
-    # ZIP Download
-    zip_path = os.path.join(img_dir, "annotated_images.zip")
-    if os.path.exists(zip_path):
-        os.remove(zip_path)
+        with zipfile.ZipFile(zip_path, 'w') as zipf:
+            for file in os.listdir(img_dir):
+                if file.endswith(".png"):
+                    file_path = os.path.join(img_dir, file)
+                    zipf.write(file_path, arcname=file)
 
-    with zipfile.ZipFile(zip_path, 'w') as zipf:
-        for file in os.listdir(img_dir):
-            if file.endswith(".png") and "tmp" not in file.lower() and not file.startswith("._"):
-                file_path = os.path.join(img_dir, file)
-                zipf.write(file_path, arcname=file)
-
-    with open(zip_path, "rb") as f:
-        st.download_button(
-            label="🖼️ Download annotated images ZIP", # TODO: fix image saving
-            data=f,
-            file_name="annotated_images.zip",
-            mime="application/zip"
-        )
+        with open(zip_path, "rb") as f:
+            st.download_button(
+                label="🖼️ Download annotated images ZIP",
+                data=f,
+                file_name="annotated_images.zip",
+                mime="application/zip"
+            )
 
 else:
-    # If videos uploaded but no results yet
     if video_files:
         st.info("➡️ Click 'Run analysis on all videos' to generate results.")
