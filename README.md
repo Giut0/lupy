@@ -69,7 +69,6 @@ sudo apt install tesseract-ocr
 sudo pacman -S tesseract
 ```
 
-
 ## 🧪 Usage
 
 After installation, run `lupy` from your terminal.
@@ -133,6 +132,33 @@ lupy -f /path/to/folder/ --rename --csv results
 ```
 
 
+## 🖥️ Graphical Interface (GUI)
+
+Lupy also includes a graphical interface built with **Streamlit**, designed for quick, visual interaction.
+
+### ▶️ Launch the GUI
+
+From your terminal:
+
+```bash
+lupy --gui
+```
+
+Or directly:
+
+```bash
+streamlit run lupy/UI.py
+```
+
+### 📋 GUI Features
+
+- Drag & drop video upload
+- Visual playback of uploaded video(s)
+- Run classification with one click
+- View textual results
+- Download predictions as `.csv`
+- Download annotated frames as `.zip`
+
 ## ⚙️ Requirements
 
 - Python 3.8+
@@ -148,10 +174,10 @@ To explore the training process and model architecture, check out the companion 
 
 👉 **[Wildlife Computer Vision Model Repository](https://github.com/Giut0/Murgia-AI-Wildlife-Track)**
 
-
 ## 📄 License
 
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 
 This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 (CC BY-NC 4.0)** license.  
 You may use, modify, and share the code for **non-commercial purposes only**, and you must give appropriate credit.
+
