@@ -1,5 +1,6 @@
 
 import os
+import shutil
 import zipfile
 import streamlit as st
 from lupy.utils.file_ops import save_csv
@@ -11,8 +12,10 @@ logging.getLogger("timm").setLevel(logging.ERROR)
 # Model setup
 model_feat, classifier, device, detection_model = models_setup()
 
-img_dir = "annotated_frames"
-video_dir = "uploaded_videos"
+temp_dir = "temp"
+img_dir = "temp/annotated_frames"
+video_dir = "temp/uploaded_videos"
+csv_path = "temp/predictions.csv"
 os.makedirs(img_dir, exist_ok=True)
 os.makedirs(video_dir, exist_ok=True)
 
@@ -37,7 +40,7 @@ if video_files and len(video_files) == 1:
 st.markdown("---")
 if st.button("🧹 Clear cache (uploaded videos + annotated frames)"):
     try:
-        for f in os.listdir(video_dir):
+        for f in os.listdir(temp_dir):
             os.remove(os.path.join(video_dir, f))
         os.rmdir(video_dir)
     except Exception:
@@ -113,7 +116,6 @@ if len(st.session_state.results) > 0:
         st.subheader("📤 Export Results")
 
         # CSV Download
-        csv_path = "predictions.csv"
         save_csv(st.session_state.results, csv_path)
         with open(csv_path, "rb") as f:
             st.download_button(
@@ -150,4 +152,8 @@ else:
 st.markdown("---")
 if st.button("🛑 Exit application"):
     st.info("⛔ Exiting the application...")
+    try:
+        shutil.rmtree(temp_dir) 
+    except Exception:
+        pass
     os._exit(0)
