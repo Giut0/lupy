@@ -16,7 +16,8 @@ setup(
         "opencv-python>=4.7.0",
         "typer>=0.9.0",
         "megadetector>=5.0.0",
-        "pytesseract>=0.3.8"
+        "pytesseract>=0.3.8",
+        "streamlit>=1.20.0"
     ],
     entry_points={
         "console_scripts": [
