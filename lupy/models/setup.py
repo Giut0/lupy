@@ -2,7 +2,7 @@ import os
 import timm
 import torch
 import joblib
-from lupy.cli_options import suppress_output
+from lupy.utils.cli_options import suppress_output
 from megadetector.detection import run_detector
 
 def models_setup():
