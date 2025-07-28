@@ -19,6 +19,13 @@ csv_path = "temp/predictions.csv"
 os.makedirs(img_dir, exist_ok=True)
 os.makedirs(video_dir, exist_ok=True)
 
+st.set_page_config(
+    page_title="Lupy - AI Video Classifier",  
+    page_icon="🐾",                         
+    layout="centered",                  
+    initial_sidebar_state="auto"
+)
+
 st.title("🐾 Lupy - Camera Trap Video Classification Tool")
 
 if "results" not in st.session_state:
@@ -35,6 +42,22 @@ if video_files and len(video_files) == 1:
     video_bytes = video_file.read()
     st.video(video_bytes)
     st.session_state.single_video_bytes = video_bytes
+
+if video_files:
+    st.markdown("### ⚙️ Processing Options")
+
+    col1, col2 = st.columns([1, 1])
+
+    with col1:
+        frame_interval = st.number_input(
+            "Processing frame interval",
+            min_value=1, max_value=120,
+            value=5,
+            step=1,
+            help="Process one frame every N frames"
+        )
+        save_datetime = st.checkbox("Save datetime", value=True)
+        
 
 # Clear cache buttons
 st.markdown("---")
@@ -54,8 +77,11 @@ if st.button("🧹 Clear cache (uploaded videos + annotated frames)"):
 
     st.success("🧼 Cache cleared!")
 
+
 # Video classification
 if video_files:
+    st.markdown("---")
+    st.markdown("### 🎞️ Video(s) processing")
     st.write(f"📦 {len(video_files)} video(s) uploaded.")
     if st.button("Run analysis on all videos"):
         with st.spinner("Processing videos..."):
@@ -89,7 +115,7 @@ if video_files:
                         classifier=classifier,
                         detection_model=detection_model,
                         device=device,
-                        save_datetime=True,
+                        save_datetime=save_datetime,
                         img_save=img_dir,
                         frame_interval=5
                     )
@@ -100,7 +126,6 @@ if video_files:
 
         st.success("✅ Analysis completed!")
 
-# Mostra risultati
 if len(st.session_state.results) > 0:
     # Show results 
     st.markdown("---")
